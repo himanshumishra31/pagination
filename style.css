@@ -1,0 +1,32 @@
+#shopImageDiv {
+  width: 100%;
+  height: 50%;
+}
+
+#shopImage {
+  margin: 0 auto;
+  display: block;
+}
+
+#content {
+  display: flex;
+}
+#filters {
+  width: 15%;
+  overflow: 30%;
+  border-right: 2px black solid;
+  border-right-width: 90%;
+}
+
+
+#productsView {
+  flex: 1;
+  overflow: auto;
+  display: inline-block;
+}
+
+#productImage {
+  width: 150px;
+  height: 150px;
+  margin-right: 20px;
+}
