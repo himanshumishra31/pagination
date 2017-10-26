@@ -3,6 +3,7 @@ function Manager(data) {
   this.filterDiv = data.filterDiv;
   this.imageFolderUrl = data.imageFolderUrl;
   this.products = [];
+  this.paginationBar = data.paginationBar;
   this.filteredProducts = [];
 }
 
@@ -28,7 +29,9 @@ Manager.prototype.createProducts = function() {
   $(this.productdata).each(function() {
     var product = new Product(this, _this.imageFolderUrl);
     _this.products.push(product);
+    _this.filteredProducts.push(product);
   })
+  this.createPaginationBar();
 };
 
 Manager.prototype.checkFilter = function(checkedCheckboxes, product, filterName) {
@@ -65,25 +68,57 @@ Manager.prototype.filteredImages = function() {
   })
 };
 
-Manager.prototype.showFilteredImages = function() {
-  var _this = this;
-  $(this.filteredProducts).each(function() {
-    var productImage = $('<img>', {src: this.url, id: 'productImage'});
-    _this.productsDiv.append(productImage);
-  })
+Manager.prototype.showFilteredImages = function(endingIndex) {
+  var _this = this,
+      startingIndex = endingIndex - this.paginationDropdown.val();
+  this.productsDiv.text('');
+  for(; startingIndex < endingIndex && startingIndex < this.filteredProducts.length ; startingIndex++) {
+    var productImage = $('<img>', {src: this.filteredProducts[startingIndex].url, id: 'productImage'});
+    this.productsDiv.append(productImage);
+  }
 };
+
+Manager.prototype.createPaginationBar = function() {
+  this.paginationBar.text('');
+  var numberofPages = Math.ceil(this.filteredProducts.length / this.paginationDropdown.val());
+  for( var pageNumber = 1 ; pageNumber <= numberofPages; pageNumber++) {
+    var pageNumberLink = $('<a>', {href: '#' , value: pageNumber}).text(pageNumber + ' ');
+    this.paginationBar.append(pageNumberLink);
+  }
+  this.paginationBarLinks = $('#paginationBar a');
+  this.paginationBarLinks.click(this.paginationLinkEvent());
+}
 
 Manager.prototype.handleEvent = function() {
   var _this = this;
   return function() {
     _this.productsDiv.empty();
     _this.filteredImages();
-    _this.showFilteredImages();
+    // _this.showFilteredImages();
+    _this.createPaginationBar();
   };
+};
+
+Manager.prototype.dropdownEvent = function() {
+  var _this = this;
+  return function() {
+    _this.createPaginationBar();
+  };
+};
+
+Manager.prototype.paginationLinkEvent = function() {
+  var _this = this;
+  return function() {
+    var imagesPerPage = parseInt($(this).text()) * _this.paginationDropdown.val() ;
+    $(this).addClass('current')
+           .siblings().removeClass('current');
+    _this.showFilteredImages(imagesPerPage);
+  }
 };
 
 Manager.prototype.bindEvents = function() {
   $('#filters input').on('change',this.handleEvent());
+  this.paginationDropdown.change(this.dropdownEvent());
 };
 
 Manager.prototype.displayProducts = function(product) {
@@ -97,7 +132,21 @@ Manager.prototype.createFilter = function() {
   this.createFilterCheckbox('color', 'colorSelector');
   this.createFilterCheckbox('brand', 'brandSelector');
   this.createAvailablityFilter();
+  this.createPaginationFilter();
 };
+
+Manager.prototype.createPaginationFilter = function() {
+  var paginationDropdown = $('<select>', { id: 'pagination'}).text('sfa'),
+      option1 = $('<option>', {value: 3}).text('3'),
+      option2 = $('<option>', {value: 6}).text('6'),
+      option3 = $('<option>', {value: 9}).text('9'),
+      filterFieldset = $('<fieldset>'),
+      filterLegend = $('<legend>', {align: 'center'}).text('Pagination');
+  paginationDropdown.append(option1, option2, option3);
+  filterFieldset.append(filterLegend, paginationDropdown);
+  this.filterDiv.append(filterFieldset);
+  this.paginationDropdown = $('#pagination');
+}
 
 Manager.prototype.createAvailablityFilter = function() {
   var allfilterValues = this.getUniqueData('sold_out'),
@@ -111,6 +160,7 @@ Manager.prototype.createAvailablityFilter = function() {
   this.filterDiv.append(filterFieldset);
   filterFieldset.append(filterLegend, filterDiv);
   filterDiv.append(checkboxAvailable, checkboxLabel, checkboxAll, checkboxAllLabel);
+  filterFieldset.after($('<br>'));
 };
 
 Manager.prototype.createFilterCheckbox = function(filterName, selectorId) {
@@ -140,7 +190,8 @@ $(document).ready(function() {
   var data = {
     productsDiv: $('#productsView'),
     imageFolderUrl: 'product_data/images/',
-    filterDiv: $('#filters')
+    filterDiv: $('#filters'),
+    paginationBar: $('#paginationBar')
     },
     managerObject = new Manager(data);
   managerObject.init();
