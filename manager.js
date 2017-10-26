@@ -17,7 +17,6 @@ Manager.prototype.init = function() {
     _this.productdata = jsonResponse;
     _this.createFilter();
     _this.createProducts();
-    _this.displayProducts();
     _this.bindEvents();
   }).fail(function() {
     alert("Error occured");
@@ -32,6 +31,8 @@ Manager.prototype.createProducts = function() {
     _this.filteredProducts.push(product);
   })
   this.createPaginationBar();
+  this.showFilteredImages(parseInt($(_this.paginationBarLinks[0]).text()) * _this.paginationDropdown.val());
+  $(this.paginationBarLinks[0]).addClass('current');
 };
 
 Manager.prototype.checkFilter = function(checkedCheckboxes, product, filterName) {
@@ -94,8 +95,9 @@ Manager.prototype.handleEvent = function() {
   return function() {
     _this.productsDiv.empty();
     _this.filteredImages();
-    // _this.showFilteredImages();
+    _this.showFilteredImages(parseInt($(_this.paginationBarLinks[0]).text()) * _this.paginationDropdown.val());
     _this.createPaginationBar();
+    $(_this.paginationBarLinks[0]).addClass('current');
   };
 };
 
@@ -103,6 +105,7 @@ Manager.prototype.dropdownEvent = function() {
   var _this = this;
   return function() {
     _this.createPaginationBar();
+    _this.showFilteredImages(parseInt($(_this.paginationBarLinks[0]).text()) * _this.paginationDropdown.val());
   };
 };
 
