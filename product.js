@@ -3,5 +3,5 @@ function Product(data, imageFolderUrl) {
   this.url = imageFolderUrl + data.url;
   this.color = data.color;
   this.brand = data.brand;
-  this.soldOut = data.sold_out;
+  this.sold_out = data.sold_out;
 }

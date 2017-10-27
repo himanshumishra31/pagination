@@ -17,10 +17,34 @@ Manager.prototype.init = function() {
     _this.productdata = jsonResponse;
     _this.createFilter();
     _this.createProducts();
+    _this.showProducts();
     _this.bindEvents();
   }).fail(function() {
     alert("Error occured");
   });
+};
+
+Manager.prototype.sort = function (a,b) {
+  if(!isNaN(a[sortBy])) {
+    a[sortBy] = parseInt(a[sortBy]);
+    b[sortBy] = parseInt(b[sortBy]);
+  }
+  if (a[sortBy] < b[sortBy])
+    return -1;
+  if (a[sortBy] > b[sortBy])
+    return 1;
+  return 0;
+}
+
+Manager.prototype.sortProducts = function() {
+  sortBy = this.sortDropdown.val();
+  this.filteredProducts.sort(this.sort);
+};
+
+Manager.prototype.showProducts = function() {
+  this.sortProducts();
+  this.showFilteredImages(parseInt($(this.paginationBarLinks[0]).text()) * this.paginationDropdown.val());
+  $(this.paginationBarLinks[0]).addClass('current');
 };
 
 Manager.prototype.createProducts = function() {
@@ -31,8 +55,6 @@ Manager.prototype.createProducts = function() {
     _this.filteredProducts.push(product);
   })
   this.createPaginationBar();
-  this.showFilteredImages(parseInt($(_this.paginationBarLinks[0]).text()) * _this.paginationDropdown.val());
-  $(this.paginationBarLinks[0]).addClass('current');
 };
 
 Manager.prototype.checkFilter = function(checkedCheckboxes, product, filterName) {
@@ -62,7 +84,7 @@ Manager.prototype.filteredImages = function() {
     if(! _this.checkFilter(_this.brandCheckboxesChecked, this, 'brand')) {
       return ;
     }
-    if(_this.availabilityCheckboxesChecked.val() == 0 && this.soldOut == 1) {
+    if(_this.availabilityCheckboxesChecked.val() == 0 && this.sold_out == 1) {
       return ;
     }
     _this.filteredProducts.push(this);
@@ -95,6 +117,7 @@ Manager.prototype.handleEvent = function() {
   return function() {
     _this.productsDiv.empty();
     _this.filteredImages();
+    _this.sortProducts();
     _this.showFilteredImages(parseInt($(_this.paginationBarLinks[0]).text()) * _this.paginationDropdown.val());
     _this.createPaginationBar();
     $(_this.paginationBarLinks[0]).addClass('current');
@@ -105,6 +128,7 @@ Manager.prototype.dropdownEvent = function() {
   var _this = this;
   return function() {
     _this.createPaginationBar();
+    _this.sortProducts();
     _this.showFilteredImages(parseInt($(_this.paginationBarLinks[0]).text()) * _this.paginationDropdown.val());
   };
 };
@@ -115,13 +139,23 @@ Manager.prototype.paginationLinkEvent = function() {
     var imagesPerPage = parseInt($(this).text()) * _this.paginationDropdown.val() ;
     $(this).addClass('current')
            .siblings().removeClass('current');
+    _this.sortProducts();
     _this.showFilteredImages(imagesPerPage);
   }
+};
+
+Manager.prototype.sortDropdownEvent = function() {
+  var _this = this;
+  return function() {
+    _this.sortProducts();
+    _this.showFilteredImages(_this.paginationBar.find('a.current').text() * _this.paginationDropdown.val());
+  };
 };
 
 Manager.prototype.bindEvents = function() {
   $('#filters input').on('change',this.handleEvent());
   this.paginationDropdown.change(this.dropdownEvent());
+  this.sortDropdown.change(this.sortDropdownEvent());
 };
 
 Manager.prototype.displayProducts = function(product) {
@@ -136,10 +170,27 @@ Manager.prototype.createFilter = function() {
   this.createFilterCheckbox('brand', 'brandSelector');
   this.createAvailablityFilter();
   this.createPaginationFilter();
+  this.createSortingFilter();
+};
+
+Manager.prototype.createSortingFilter = function() {
+  var sortingByValue =  Object.keys(this.productdata[0]),
+      filterFieldset = $('<fieldset>'),
+      filterLegend = $('<legend>', {align: 'center'}).text('Sort By'),
+      sortDropdown = $('<select>', {id: 'sorting'});
+  for(sortvalue of sortingByValue) {
+    if(!(sortvalue == 'url')) {
+      var dropdownOption = $('<option>', {value: sortvalue}).text(sortvalue);
+      sortDropdown.append(dropdownOption);
+    }
+  }
+  filterFieldset.append(filterLegend,sortDropdown);
+  this.filterDiv.append(filterFieldset);
+  this.sortDropdown = $('#sorting');
 };
 
 Manager.prototype.createPaginationFilter = function() {
-  var paginationDropdown = $('<select>', { id: 'pagination'}).text('sfa'),
+  var paginationDropdown = $('<select>', { id: 'pagination'}),
       option1 = $('<option>', {value: 3}).text('3'),
       option2 = $('<option>', {value: 6}).text('6'),
       option3 = $('<option>', {value: 9}).text('9'),
@@ -149,7 +200,7 @@ Manager.prototype.createPaginationFilter = function() {
   filterFieldset.append(filterLegend, paginationDropdown);
   this.filterDiv.append(filterFieldset);
   this.paginationDropdown = $('#pagination');
-}
+};
 
 Manager.prototype.createAvailablityFilter = function() {
   var allfilterValues = this.getUniqueData('sold_out'),
@@ -160,10 +211,10 @@ Manager.prototype.createAvailablityFilter = function() {
       checkboxLabel = $('<label>', {for: '0'}).text('Available'),
       checkboxAll = $('<input>', {type: 'radio', id: 'all', value: 'all', name: 'availability'}),
       checkboxAllLabel = $('<label>', {for: 'all'}).text('ALL');
-  this.filterDiv.append(filterFieldset);
   filterFieldset.append(filterLegend, filterDiv);
   filterDiv.append(checkboxAvailable, checkboxLabel, checkboxAll, checkboxAllLabel);
   filterFieldset.after($('<br>'));
+  this.filterDiv.append(filterFieldset);
 };
 
 Manager.prototype.createFilterCheckbox = function(filterName, selectorId) {
@@ -198,4 +249,4 @@ $(document).ready(function() {
     },
     managerObject = new Manager(data);
   managerObject.init();
-})
+});
