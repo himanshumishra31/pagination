@@ -92,7 +92,7 @@ Manager.prototype.filteredImages = function() {
 };
 
 Manager.prototype.showFilteredImages = function(endingIndex) {
-  var _this = this,
+  var _this = this;
       startingIndex = endingIndex - this.paginationDropdown.val();
   this.productsDiv.text('');
   for(; startingIndex < endingIndex && startingIndex < this.filteredProducts.length ; startingIndex++) {
@@ -129,6 +129,7 @@ Manager.prototype.dropdownEvent = function() {
   return function() {
     _this.createPaginationBar();
     _this.sortProducts();
+    $(_this.paginationBarLinks[0]).addClass('current');
     _this.showFilteredImages(parseInt($(_this.paginationBarLinks[0]).text()) * _this.paginationDropdown.val());
   };
 };
