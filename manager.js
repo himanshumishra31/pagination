@@ -24,21 +24,22 @@ Manager.prototype.init = function() {
   });
 };
 
-Manager.prototype.sort = function (a,b) {
-  if(!isNaN(a[sortBy])) {
-    a[sortBy] = parseInt(a[sortBy]);
-    b[sortBy] = parseInt(b[sortBy]);
-  }
-  if (a[sortBy] < b[sortBy])
-    return -1;
-  if (a[sortBy] > b[sortBy])
-    return 1;
-  return 0;
-}
+Manager.prototype.sort = function (sortBy) {
+  return function(a,b) {
+    if(!isNaN(a[sortBy])) {
+      a[sortBy] = parseInt(a[sortBy]);
+      b[sortBy] = parseInt(b[sortBy]);
+    }
+    if (a[sortBy] < b[sortBy])
+      return -1;
+    if (a[sortBy] > b[sortBy])
+      return 1;
+    return 0;
+  };
+};
 
 Manager.prototype.sortProducts = function() {
-  sortBy = this.sortDropdown.val();
-  this.filteredProducts.sort(this.sort);
+  this.filteredProducts.sort(this.sort(this.sortDropdown.val()));
 };
 
 Manager.prototype.showProducts = function() {
