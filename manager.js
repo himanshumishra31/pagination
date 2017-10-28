@@ -1,4 +1,5 @@
-function Manager(data) {
+//= require ./product.js
+function StoreManager(data) {
   this.productsDiv = data.productsDiv;
   this.filterDiv = data.filterDiv;
   this.imageFolderUrl = data.imageFolderUrl;
@@ -7,58 +8,62 @@ function Manager(data) {
   this.filteredProducts = [];
 }
 
-Manager.prototype.init = function() {
+StoreManager.prototype.init = function() {
   var _this = this;
   $.ajax({
     url : "product.json",
     type : "GET",
     dataType : 'json',
-  }).done(function(jsonResponse) {
-    _this.productdata = jsonResponse;
-    _this.createFilter();
-    _this.createProducts();
-    _this.showProducts();
-    _this.bindEvents();
-  }).fail(function() {
-    alert("Error occured");
+    success: function(jsonResponse) {
+      _this.productdata = jsonResponse;
+      _this.createFilter();
+      _this.createProducts();
+      _this.createPaginationBar();
+      _this.showProducts();
+      _this.bindEvents();
+    },
+    fail: function() {
+      alert('Error occured');
+      _this.init();
+    }
   });
 };
 
-Manager.prototype.sort = function (sortBy) {
-  return function(a,b) {
-    if(!isNaN(a[sortBy])) {
-      a[sortBy] = parseInt(a[sortBy]);
-      b[sortBy] = parseInt(b[sortBy]);
+StoreManager.prototype.sort = function (sortBy) {
+  return function(first, second) {
+    if(!isNaN(first[sortBy])) {
+      first[sortBy] = parseInt(first[sortBy]);
+      second[sortBy] = parseInt(second[sortBy]);
     }
-    if (a[sortBy] < b[sortBy])
+    if (first[sortBy] < second[sortBy])
       return -1;
-    if (a[sortBy] > b[sortBy])
+    if (first[sortBy] > second[sortBy])
       return 1;
     return 0;
   };
 };
 
-Manager.prototype.sortProducts = function() {
+StoreManager.prototype.sortProducts = function() {
   this.filteredProducts.sort(this.sort(this.sortDropdown.val()));
 };
 
-Manager.prototype.showProducts = function() {
+StoreManager.prototype.showProducts = function() {
   this.sortProducts();
   this.showFilteredImages(parseInt($(this.paginationBarLinks[0]).text()) * this.paginationDropdown.val());
   $(this.paginationBarLinks[0]).addClass('current');
 };
 
-Manager.prototype.createProducts = function() {
+StoreManager.prototype.createProducts = function() {
   var _this = this;
   $(this.productdata).each(function() {
-    var product = new Product(this, _this.imageFolderUrl);
+    this.url = _this.imageFolderUrl + this.url;
+    var product = new Product(this);
     _this.products.push(product);
     _this.filteredProducts.push(product);
-  })
-  this.createPaginationBar();
+  });
 };
 
-Manager.prototype.checkFilter = function(checkedCheckboxes, product, filterName) {
+StoreManager.prototype.checkFilter = function(checkedCheckboxes, product, filterName) {
   if(checkedCheckboxes.length) {
     var match = false;
     checkedCheckboxes.each(function() {
@@ -72,7 +77,7 @@ Manager.prototype.checkFilter = function(checkedCheckboxes, product, filterName)
   }
 };
 
-Manager.prototype.filteredImages = function() {
+StoreManager.prototype.filteredImages = function() {
   this.filteredProducts = [];
   this.colorCheckboxesChecked = $('#colorSelector input:checked');
   this.brandCheckboxesChecked = $('#brandSelector input:checked');
@@ -89,85 +94,123 @@ Manager.prototype.filteredImages = function() {
       return ;
     }
     _this.filteredProducts.push(this);
-  })
+  });
 };
 
-Manager.prototype.showFilteredImages = function(endingIndex) {
+StoreManager.prototype.createLinkElement = function(value) {
+  return $('<a>', {href: '#', value: value}).text(value + ' ');
+};
+
+StoreManager.prototype.createImgElement = function(idValue, srcValue) {
+  return $('<img>', {id: idValue, src: srcValue });
+};
+
+StoreManager.prototype.createSelectElement = function(idValue, dataValue) {
+  return $('<select>', {id: idValue, data_attr: dataValue });
+};
+
+StoreManager.prototype.createOption = function(value) {
+  return $('<option>', {value: value}).text(value);
+};
+
+StoreManager.prototype.createFieldset = function() {
+  return $('<fieldset>');
+};
+
+StoreManager.prototype.createLegend = function(textValue) {
+  return $('<legend>', {align: 'center'}).text(textValue);
+};
+
+StoreManager.prototype.createDiv = function(divId) {
+  return $('<div>', {id: divId});
+};
+
+StoreManager.prototype.createInputElement = function(inputType, value, inputName) {
+  return $('<input>', {type: inputType, id: value, value: value, name: inputName});
+};
+
+StoreManager.prototype.createLabel = function(forValue, textValue){
+  return $('<label>', {for: forValue}).text(textValue);
+};
+
+StoreManager.prototype.showFilteredImages = function(endingIndex) {
   var _this = this;
       startingIndex = endingIndex - this.paginationDropdown.val();
-  this.productsDiv.text('');
+  this.productsDiv.empty();
   for(; startingIndex < endingIndex && startingIndex < this.filteredProducts.length ; startingIndex++) {
-    var productImage = $('<img>', {src: this.filteredProducts[startingIndex].url, id: 'productImage'});
+    var productImage = this.createImgElement('productImage', this.filteredProducts[startingIndex].url);
+
     this.productsDiv.append(productImage);
   }
 };
 
-Manager.prototype.createPaginationBar = function() {
-  this.paginationBar.text('');
+StoreManager.prototype.createPaginationBar = function() {
+  this.paginationBar.empty();
   var numberofPages = Math.ceil(this.filteredProducts.length / this.paginationDropdown.val());
   for( var pageNumber = 1 ; pageNumber <= numberofPages; pageNumber++) {
-    var pageNumberLink = $('<a>', {href: '#' , value: pageNumber}).text(pageNumber + ' ');
+    var pageNumberLink = this.createLinkElement(pageNumber);
     this.paginationBar.append(pageNumberLink);
   }
   this.paginationBarLinks = $('#paginationBar a');
   this.paginationBarLinks.click(this.paginationLinkEvent());
 }
 
-Manager.prototype.handleEvent = function() {
+StoreManager.prototype.eventHandling = function() {
+  this.sortProducts();
+  this.showFilteredImages(this.paginationBar.find('a.current').text() * this.paginationDropdown.val());
+
+};
+
+StoreManager.prototype.filterEvent = function() {
   var _this = this;
   return function() {
     _this.productsDiv.empty();
     _this.filteredImages();
-    _this.sortProducts();
-    _this.showFilteredImages(parseInt($(_this.paginationBarLinks[0]).text()) * _this.paginationDropdown.val());
     _this.createPaginationBar();
     $(_this.paginationBarLinks[0]).addClass('current');
+    _this.eventHandling();
   };
 };
 
-Manager.prototype.dropdownEvent = function() {
+StoreManager.prototype.dropdownEvent = function() {
   var _this = this;
   return function() {
     _this.createPaginationBar();
-    _this.sortProducts();
     $(_this.paginationBarLinks[0]).addClass('current');
-    _this.showFilteredImages(parseInt($(_this.paginationBarLinks[0]).text()) * _this.paginationDropdown.val());
+    _this.eventHandling();
   };
 };
 
-Manager.prototype.paginationLinkEvent = function() {
+StoreManager.prototype.paginationLinkEvent = function() {
   var _this = this;
   return function() {
-    var imagesPerPage = parseInt($(this).text()) * _this.paginationDropdown.val() ;
     $(this).addClass('current')
            .siblings().removeClass('current');
-    _this.sortProducts();
-    _this.showFilteredImages(imagesPerPage);
+    _this.eventHandling();
   }
 };
 
-Manager.prototype.sortDropdownEvent = function() {
+StoreManager.prototype.sortDropdownEvent = function() {
   var _this = this;
   return function() {
-    _this.sortProducts();
-    _this.showFilteredImages(_this.paginationBar.find('a.current').text() * _this.paginationDropdown.val());
+    _this.eventHandling();
   };
 };
 
-Manager.prototype.bindEvents = function() {
-  $('#filters input').on('change',this.handleEvent());
+StoreManager.prototype.bindEvents = function() {
+  $('#filters input').on('change',this.filterEvent());
   this.paginationDropdown.change(this.dropdownEvent());
   this.sortDropdown.change(this.sortDropdownEvent());
 };
 
-Manager.prototype.displayProducts = function(product) {
+StoreManager.prototype.displayProducts = function(product) {
   for(var product of this.products) {
-    var productImage = $('<img>', {src: product.url, id: 'productImage'});
+    var productImage = this.createInputElement('productImage', product.url);
     this.productsDiv.append(productImage);
   }
 };
 
-Manager.prototype.createFilter = function() {
+StoreManager.prototype.createFilter = function() {
   this.createFilterCheckbox('color', 'colorSelector');
   this.createFilterCheckbox('brand', 'brandSelector');
   this.createAvailablityFilter();
@@ -175,69 +218,69 @@ Manager.prototype.createFilter = function() {
   this.createSortingFilter();
 };
 
-Manager.prototype.createSortingFilter = function() {
+StoreManager.prototype.createSortingFilter = function() {
   var sortingByValue =  Object.keys(this.productdata[0]),
-      filterFieldset = $('<fieldset>'),
-      filterLegend = $('<legend>', {align: 'center'}).text('Sort By'),
-      sortDropdown = $('<select>', {id: 'sorting'});
-  for(sortvalue of sortingByValue) {
-    if(!(sortvalue == 'url')) {
-      var dropdownOption = $('<option>', {value: sortvalue}).text(sortvalue);
+      filterFieldset = this.createFieldset(),
+      filterLegend = this.createLegend('Sort By'),
+      sortDropdown = this.createSelectElement('sorting', 'sortingFilter');
+  for(var sortvalue of sortingByValue) {
+    if(sortvalue != 'url') {
+      var dropdownOption = this.createOption(sortvalue);
       sortDropdown.append(dropdownOption);
     }
   }
   filterFieldset.append(filterLegend,sortDropdown);
   this.filterDiv.append(filterFieldset);
-  this.sortDropdown = $('#sorting');
+  this.sortDropdown = $('select[data_attr="sortingFilter"]');
 };
 
-Manager.prototype.createPaginationFilter = function() {
-  var paginationDropdown = $('<select>', { id: 'pagination'}),
-      option1 = $('<option>', {value: 3}).text('3'),
-      option2 = $('<option>', {value: 6}).text('6'),
-      option3 = $('<option>', {value: 9}).text('9'),
-      filterFieldset = $('<fieldset>'),
-      filterLegend = $('<legend>', {align: 'center'}).text('Pagination');
+StoreManager.prototype.createPaginationFilter = function() {
+  var paginationDropdown = this.createSelectElement('pagination', 'paginationFilter'),
+      option1 = this.createOption('3'),
+      option2 = this.createOption('6'),
+      option3 = this.createOption('9'),
+      filterFieldset = this.createFieldset(),
+      filterLegend = this.createLegend('Pagination');
   paginationDropdown.append(option1, option2, option3);
   filterFieldset.append(filterLegend, paginationDropdown);
   this.filterDiv.append(filterFieldset);
-  this.paginationDropdown = $('#pagination');
+  this.paginationDropdown = $('select[data_attr="paginationFilter"]');
 };
 
-Manager.prototype.createAvailablityFilter = function() {
+StoreManager.prototype.createAvailablityFilter = function() {
   var allfilterValues = this.getUniqueData('sold_out'),
-      filterFieldset = $('<fieldset>'),
-      filterLegend = $('<legend>', {align: 'center'}).text('Availability'),
-      filterDiv = $('<div>', {id: 'availableSelector'}),
-      checkboxAvailable = $('<input>', {type: 'radio', id: '0', value: '0', name: 'availability'}),
-      checkboxLabel = $('<label>', {for: '0'}).text('Available'),
-      checkboxAll = $('<input>', {type: 'radio', id: 'all', value: 'all', name: 'availability'}),
-      checkboxAllLabel = $('<label>', {for: 'all'}).text('ALL');
+      filterFieldset = this.createFieldset(),
+      filterLegend = this.createLegend('Availability'),
+      filterDiv = this.createDiv('availableSelector'),
+      checkboxAvailable = this.createInputElement('radio', '0', 'availability'),
+      checkboxLabel = this.createLabel('0', 'Available');
+      checkboxAll = this.createInputElement('radio', 'all', 'availability'),
+      checkboxAllLabel = this.createLabel('all', 'ALL');
   filterFieldset.append(filterLegend, filterDiv);
   filterDiv.append(checkboxAvailable, checkboxLabel, checkboxAll, checkboxAllLabel);
-  filterFieldset.after($('<br>'));
   this.filterDiv.append(filterFieldset);
 };
 
-Manager.prototype.createFilterCheckbox = function(filterName, selectorId) {
+StoreManager.prototype.createFilterCheckbox = function(filterName, selectorId) {
   var allfilterValues = this.getUniqueData(filterName),
-      filterFieldset = $('<fieldset>'),
-      filterLegend = $('<legend>', {align: 'center'}).text(filterName),
-      filterDiv = $('<div>', {id: selectorId});
+      filterFieldset = this.createFieldset(),
+      filterLegend = this.createLegend(filterName),
+      filterDiv = this.createDiv(selectorId);
   this.filterDiv.append(filterFieldset);
   filterFieldset.append(filterLegend, filterDiv);
   for(var filterValue of allfilterValues) {
-    var filterCheckbox = $('<input>', {type: 'checkbox', id: filterValue, value: filterValue} ),
-        checkboxLabel = $('<label>', {for: filterValue }).text(filterValue);
+    var filterCheckbox = this.createInputElement('checkbox', filterValue, 'filter'),
+        checkboxLabel = this.createLabel(filterValue, filterValue);
     filterDiv.append(filterCheckbox, checkboxLabel);
   }
-  filterFieldset.after($('<br>'));
 };
 
-Manager.prototype.getUniqueData = function(filter) {
-  var uniqueValues = new Set();
+StoreManager.prototype.getUniqueData = function(filter) {
+  var uniqueValues = [];
   $(this.productdata).each(function() {
-    uniqueValues.add(this[filter]);
+    if(uniqueValues.indexOf(this[filter]) == -1){
+      uniqueValues.push(this[filter]);
+    }
   });
   return uniqueValues;
 };
@@ -249,6 +292,6 @@ $(document).ready(function() {
     filterDiv: $('#filters'),
     paginationBar: $('#paginationBar')
     },
-    managerObject = new Manager(data);
-  managerObject.init();
+    storeManagerObject = new StoreManager(data);
+  storeManagerObject.init();
 });
