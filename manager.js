@@ -95,7 +95,6 @@ StoreManager.prototype.sortProducts = function() {
 
 StoreManager.prototype.showProducts = function() {
   this.sortProducts();
-  // $(this.paginationBarLinks[0]).addClass('current');
   this.showFilteredImages(this.paginationBar.find('a.current').text() * this.paginationDropdown.val());
 };
 
