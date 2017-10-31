@@ -275,9 +275,10 @@ StoreManager.prototype.createCurrentSelectionURL = function() {
     brands: this.getCode(this.brandSelector),
     availability: this.getCode(this.availableSelector),
     pagination: this.paginationDropdown.val(),
-    sortBy: this.sortDropdown.val()
+    sortBy: this.sortDropdown.val(),
+    page: this.paginationBar.find('a.current').attr('value')
   };
-  history.pushState(this.selectedFilters, '', '?' + jQuery.param(this.selectedFilters) + '&page=' + this.paginationBar.find('a.current').attr('value'));
+  location.search = jQuery.param(this.selectedFilters);
 };
 
 StoreManager.prototype.getCode = function(filter) {
