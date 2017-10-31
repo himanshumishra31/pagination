@@ -6,7 +6,18 @@ function StoreManager(data) {
   this.products = [];
   this.paginationBar = data.paginationBar;
   this.filteredProducts = [];
-  this.selectPageNumber = "page=1";
+  this.selectPageNumber = "1";
+  this.color = data.color;
+  this.colorSelectorId = data.colorSelectorId;
+  this.brand = data.brand;
+  this.brandSelectorId = data.brandSelectorId;
+  this.paginationArray = data.paginationArray;
+  this.paginationId = data.paginationId;
+  this.sortingId = data.sortingId;
+  this.availableSelectorId = data.availableSelectorId;
+  this.sortingData = data.sortingData;
+  this.availability = data.availability;
+  this.filter = data.filter;
 }
 
 StoreManager.prototype.init = function() {
@@ -18,6 +29,7 @@ StoreManager.prototype.init = function() {
     success: function(jsonResponse) {
       _this.productdata = jsonResponse;
       _this.createFilter();
+      _this.initializeFilters();
       _this.createProducts();
       _this.checkPreviousSelectedFilter();
       _this.filteredImages();
@@ -33,21 +45,55 @@ StoreManager.prototype.init = function() {
   });
 };
 
-StoreManager.prototype.checkPreviousSelectedFilter = function() {
-  var filtersWithValues = location.search.replace('?','').split('&');
-  if(location.search) {
-    this.checkSelectedFilter(filtersWithValues[0], this.colorSelectorCheckboxes);
-    this.checkSelectedFilter(filtersWithValues[1], this.brandSelectorCheckboxes);
-    this.checkSelectedFilter(filtersWithValues[2], this.availableSelectorCheckboxes);
-    this.selectDropdownValue(filtersWithValues[3], this.paginationDropdown);
-    this.selectDropdownValue(filtersWithValues[4], this.sortDropdown);
-    this.selectPageNumber = filtersWithValues[5];
-  }
-
+StoreManager.prototype.createCurrentSelectionURL = function() {
+  this.selectedFilters = {
+    color: this.getCode(this.colorSelector),
+    brand: this.getCode(this.brandSelector),
+    availability: this.getCode(this.availableSelector),
+    pagination: this.paginationDropdown.val(),
+    sortBy: this.sortDropdown.val(),
+    page: this.paginationBar.find('a.current').attr('value')
+  };
+  history.pushState(this.selectedFilters, '', '?' + decodeURI($.param(this.selectedFilters)).replace(/\[\]/g,''));
 };
 
-StoreManager.prototype.selectPage = function(pageWithValue) {
-  var pagenumber = pageWithValue.split('=')[1];
+StoreManager.prototype.getCode = function(filter) {
+  var selectedCheckboxes = [];
+  $.each(filter.find('input'), function() {
+    if (this.checked) {
+      selectedCheckboxes.push($(this).attr('value'));
+    }
+  });
+  return selectedCheckboxes;
+};
+
+StoreManager.prototype.checkPreviousSelectedFilter = function() {
+  var filtersWithValues = location.search.replace('?','').replace(/\%20/g, ' ').split('&');
+  if(location.search) {
+    for(var urlvalue of filtersWithValues) {
+      var filterName = urlvalue.split('=')[0],
+          filterValue =  urlvalue.split('=')[1];
+      this.findFilterName(filterName, filterValue);
+    }
+  }
+};
+
+StoreManager.prototype.findFilterName = function(filterName, filterValue){
+  if(filterName == 'brand' || filterName == 'color' || filterName == 'availability') {
+    this.checkSelectedFilter(filterValue);
+  }
+  if(filterName == 'sortBy') {
+    this.selectDropdownValue(filterValue, this.sortDropdown);
+  }
+  if(filterName == 'pagination') {
+    this.selectDropdownValue(filterValue, this.paginationDropdown);
+  }
+  if(filterName == 'page') {
+    this.selectPageNumber = filterValue;
+  }
+};
+
+StoreManager.prototype.selectPage = function(pagenumber) {
   this.paginationBarLinks.each(function() {
     var that = $(this);
     if(that.attr('value') == pagenumber) {
@@ -56,22 +102,17 @@ StoreManager.prototype.selectPage = function(pageWithValue) {
       that.removeClass('current');
     }
   });
-
 };
 
-StoreManager.prototype.selectDropdownValue = function(valueWithFilter, filterDropwdown) {
-  var value = valueWithFilter.split('=')[1];
-  filterDropwdown.val(value);
+StoreManager.prototype.selectDropdownValue = function(filterValue, filterDropwdown) {
+  filterDropwdown.val(filterValue);
 };
 
-StoreManager.prototype.checkSelectedFilter = function(filterValue, filterCheckboxes) {
-  var values = filterValue.split('=')[1],
-      index = 0;
-  filterCheckboxes.each(function() {
-    if(values[index] == 1){
+StoreManager.prototype.checkSelectedFilter = function(filterValue) {
+  $('#filters input').each(function() {
+    if($(this).attr('value') == filterValue){
       $(this).attr('checked', true);
     }
-    index++;
   })
 };
 
@@ -124,9 +165,9 @@ StoreManager.prototype.checkFilter = function(checkedCheckboxes, product, filter
 
 StoreManager.prototype.filteredImages = function() {
   this.filteredProducts = [];
-  this.colorCheckboxesChecked = $('#colorSelector input:checked');
-  this.brandCheckboxesChecked = $('#brandSelector input:checked');
-  this.availabilityCheckboxesChecked = $('#availableSelector input:checked');
+  this.colorCheckboxesChecked = this.colorSelector.find('input:checked');
+  this.brandCheckboxesChecked = this.brandSelector.find('input:checked');
+  this.availabilityCheckboxesChecked = this.availableSelector.find('input:checked');
   var _this = this;
   $(this.products).each(function() {
     if(! _this.checkFilter(_this.colorCheckboxesChecked, this, 'color')) {
@@ -166,8 +207,8 @@ StoreManager.prototype.createLegend = function(textValue) {
   return $('<legend>', {align: 'center'}).text(textValue);
 };
 
-StoreManager.prototype.createDiv = function(divId) {
-  return $('<div>', {id: divId});
+StoreManager.prototype.createDiv = function(value) {
+  return $('<div>', {id: value, data_attr: value});
 };
 
 StoreManager.prototype.createInputElement = function(inputType, value, inputName) {
@@ -196,8 +237,9 @@ StoreManager.prototype.createPaginationBar = function() {
     var pageNumberLink = this.createLinkElement(pageNumber);
     this.paginationBar.append(pageNumberLink);
   }
-  this.paginationBarLinks = $('#paginationBar a');
+  this.paginationBarLinks = this.paginationBar.find('a');
   this.paginationBarLinks.click(this.paginationLinkEvent());
+
 }
 
 StoreManager.prototype.eventHandling = function() {
@@ -243,7 +285,7 @@ StoreManager.prototype.sortDropdownEvent = function() {
 };
 
 StoreManager.prototype.bindEvents = function() {
-  $('#filters input').on('change',this.filterEvent());
+  this.filterDiv.on('change','input',this.filterEvent());
   this.paginationDropdown.change(this.dropdownEvent());
   this.sortDropdown.change(this.sortDropdownEvent());
 };
@@ -256,48 +298,30 @@ StoreManager.prototype.displayProducts = function(product) {
 };
 
 StoreManager.prototype.createFilter = function() {
-  this.createFilterCheckbox('color', 'colorSelector');
-  this.createFilterCheckbox('brand', 'brandSelector');
+  this.createFilterCheckbox(this.color, this.colorSelectorId);
+  this.createFilterCheckbox(this.brand, this.brandSelectorId);
   this.createAvailablityFilter();
   this.createPaginationFilter();
   this.createSortingFilter();
-  this.colorSelector = $('#colorSelector');
-  this.brandSelector = $('#brandSelector');
-  this.availableSelector = $('#availableSelector');
+};
+
+StoreManager.prototype.initializeFilters = function() {
+  this.colorSelector = $('div[data_attr="colorSelector"]');
+  this.brandSelector = $('div[data_attr="brandSelector"]');
+  this.availableSelector = $('div[data_attr="availableSelector"]');
   this.colorSelectorCheckboxes = this.colorSelector.find('input');
   this.brandSelectorCheckboxes = this.brandSelector.find('input');
   this.availableSelectorCheckboxes = this.availableSelector.find('input');
+  this.sortDropdown = $('select[data_attr="sortingFilter"]');
+  this.paginationDropdown = $('select[data_attr="paginationFilter"]');
 };
 
-StoreManager.prototype.createCurrentSelectionURL = function() {
-  this.selectedFilters = {
-    colors: this.getCode(this.colorSelector),
-    brands: this.getCode(this.brandSelector),
-    availability: this.getCode(this.availableSelector),
-    pagination: this.paginationDropdown.val(),
-    sortBy: this.sortDropdown.val(),
-    page: this.paginationBar.find('a.current').attr('value')
-  };
-  location.search = jQuery.param(this.selectedFilters);
-};
-
-StoreManager.prototype.getCode = function(filter) {
-  var code = '';
-  $.each(filter.find('input'), function() {
-    if (this.checked) {
-      code += '1';
-    } else {
-      code += '0';
-    }
-  });
-  return code;
-};
 
 StoreManager.prototype.createSortingFilter = function() {
   var sortingByValue =  Object.keys(this.productdata[0]),
       filterFieldset = this.createFieldset(),
       filterLegend = this.createLegend('Sort By'),
-      sortDropdown = this.createSelectElement('sorting', 'sortingFilter');
+      sortDropdown = this.createSelectElement(this.sortingId, this.sortingData);
   for(var sortvalue of sortingByValue) {
     if(sortvalue != 'url') {
       var dropdownOption = this.createOption(sortvalue);
@@ -306,30 +330,28 @@ StoreManager.prototype.createSortingFilter = function() {
   }
   filterFieldset.append(filterLegend,sortDropdown);
   this.filterDiv.append(filterFieldset);
-  this.sortDropdown = $('select[data_attr="sortingFilter"]');
 };
 
 StoreManager.prototype.createPaginationFilter = function() {
   var paginationDropdown = this.createSelectElement('pagination', 'paginationFilter'),
-      option1 = this.createOption('3'),
-      option2 = this.createOption('6'),
-      option3 = this.createOption('9'),
       filterFieldset = this.createFieldset(),
       filterLegend = this.createLegend('Pagination');
-  paginationDropdown.append(option1, option2, option3);
+  for(optionValue of this.paginationArray) {
+    var option = this.createOption(optionValue);
+    paginationDropdown.append(option);
+  }
   filterFieldset.append(filterLegend, paginationDropdown);
   this.filterDiv.append(filterFieldset);
-  this.paginationDropdown = $('select[data_attr="paginationFilter"]');
 };
 
 StoreManager.prototype.createAvailablityFilter = function() {
   var allfilterValues = this.getUniqueData('sold_out'),
       filterFieldset = this.createFieldset(),
       filterLegend = this.createLegend('Availability'),
-      filterDiv = this.createDiv('availableSelector'),
-      checkboxAvailable = this.createInputElement('radio', '0', 'availability'),
+      filterDiv = this.createDiv(this.availableSelectorId),
+      checkboxAvailable = this.createInputElement('radio', '0', this.availability),
       checkboxLabel = this.createLabel('0', 'Available');
-      checkboxAll = this.createInputElement('radio', '1', 'availability'),
+      checkboxAll = this.createInputElement('radio', '1', this.availability),
       checkboxAllLabel = this.createLabel('1', 'ALL');
   filterFieldset.append(filterLegend, filterDiv);
   filterDiv.append(checkboxAvailable, checkboxLabel, checkboxAll, checkboxAllLabel);
@@ -344,7 +366,7 @@ StoreManager.prototype.createFilterCheckbox = function(filterName, selectorId) {
   this.filterDiv.append(filterFieldset);
   filterFieldset.append(filterLegend, filterDiv);
   for(var filterValue of allfilterValues) {
-    var filterCheckbox = this.createInputElement('checkbox', filterValue, 'filter'),
+    var filterCheckbox = this.createInputElement('checkbox', filterValue, this.filter),
         checkboxLabel = this.createLabel(filterValue, filterValue);
     filterDiv.append(filterCheckbox, checkboxLabel);
   }
@@ -362,10 +384,21 @@ StoreManager.prototype.getUniqueData = function(filter) {
 
 $(document).ready(function() {
   var data = {
-    productsDiv: $('#productsView'),
+    productsDiv: $('div[data-attr="productsView"]'),
     imageFolderUrl: 'product_data/images/',
-    filterDiv: $('#filters'),
-    paginationBar: $('#paginationBar')
+    filterDiv: $('div[data-attr="filters"]'),
+    paginationBar: $('div[data-attr="paginationBar"]'),
+    color: 'color',
+    colorSelectorId: 'colorSelector',
+    brand: 'brand',
+    brandSelectorId: 'brandSelector',
+    availableSelectorId: 'availableSelector',
+    paginationArray: [3,6,9],
+    paginationId: 'pagination',
+    sortingId: 'sorting',
+    sortingData: 'sortingFilter',
+    availability: 'availability',
+    filter: 'filter'
     },
     storeManagerObject = new StoreManager(data);
   storeManagerObject.init();
