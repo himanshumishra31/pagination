@@ -32,7 +32,7 @@ StoreManager.prototype.init = function() {
       _this.initializeFilters();
       _this.createProducts();
       _this.checkPreviousSelectedFilter();
-      _this.filteredImages();
+      _this.filterProducts();
       _this.createPaginationBar();
       _this.selectPage(_this.selectPageNumber);
       _this.showProducts();
@@ -47,9 +47,9 @@ StoreManager.prototype.init = function() {
 
 StoreManager.prototype.createCurrentSelectionURL = function() {
   this.selectedFilters = {
-    color: this.getCode(this.colorSelector),
-    brand: this.getCode(this.brandSelector),
-    availability: this.getCode(this.availableSelector),
+    color: this.getSelectedCheckbox(this.colorSelector),
+    brand: this.getSelectedCheckbox(this.brandSelector),
+    availability: this.getSelectedCheckbox(this.availableSelector),
     pagination: this.paginationDropdown.val(),
     sortBy: this.sortDropdown.val(),
     page: this.paginationBar.find('a.current').attr('value')
@@ -57,7 +57,7 @@ StoreManager.prototype.createCurrentSelectionURL = function() {
   history.pushState(this.selectedFilters, '', '?' + decodeURI($.param(this.selectedFilters)).replace(/\[\]/g,''));
 };
 
-StoreManager.prototype.getCode = function(filter) {
+StoreManager.prototype.getSelectedCheckbox = function(filter) {
   var selectedCheckboxes = [];
   $.each(filter.find('input'), function() {
     if (this.checked) {
@@ -73,12 +73,12 @@ StoreManager.prototype.checkPreviousSelectedFilter = function() {
     for(var urlvalue of filtersWithValues) {
       var filterName = urlvalue.split('=')[0],
           filterValue =  urlvalue.split('=')[1];
-      this.findFilterName(filterName, filterValue);
+      this.checkfilter(filterName, filterValue);
     }
   }
 };
 
-StoreManager.prototype.findFilterName = function(filterName, filterValue){
+StoreManager.prototype.checkfilter = function(filterName, filterValue){
   if(filterName == 'brand' || filterName == 'color' || filterName == 'availability') {
     this.checkSelectedFilter(filterValue);
   }
@@ -109,7 +109,7 @@ StoreManager.prototype.selectDropdownValue = function(filterValue, filterDropwdo
 };
 
 StoreManager.prototype.checkSelectedFilter = function(filterValue) {
-  $('#filters input').each(function() {
+  this.filterDiv.find('input').each(function() {
     if($(this).attr('value') == filterValue){
       $(this).attr('checked', true);
     }
@@ -136,7 +136,7 @@ StoreManager.prototype.sortProducts = function() {
 
 StoreManager.prototype.showProducts = function() {
   this.sortProducts();
-  this.showFilteredImages(this.paginationBar.find('a.current').text() * this.paginationDropdown.val());
+  this.showFilteredProducts(this.paginationBar.find('a.current').text() * this.paginationDropdown.val());
 };
 
 StoreManager.prototype.createProducts = function() {
@@ -163,7 +163,7 @@ StoreManager.prototype.checkFilter = function(checkedCheckboxes, product, filter
   }
 };
 
-StoreManager.prototype.filteredImages = function() {
+StoreManager.prototype.filterProducts = function() {
   this.filteredProducts = [];
   this.colorCheckboxesChecked = this.colorSelector.find('input:checked');
   this.brandCheckboxesChecked = this.brandSelector.find('input:checked');
@@ -219,7 +219,7 @@ StoreManager.prototype.createLabel = function(forValue, textValue){
   return $('<label>', {for: forValue}).text(textValue);
 };
 
-StoreManager.prototype.showFilteredImages = function(endingIndex) {
+StoreManager.prototype.showFilteredProducts = function(endingIndex) {
   var _this = this;
       startingIndex = endingIndex - this.paginationDropdown.val();
   this.productsDiv.empty();
@@ -242,9 +242,9 @@ StoreManager.prototype.createPaginationBar = function() {
 
 }
 
-StoreManager.prototype.eventHandling = function() {
+StoreManager.prototype.eventHandler = function() {
   this.sortProducts();
-  this.showFilteredImages(this.paginationBar.find('a.current').text() * this.paginationDropdown.val());
+  this.showFilteredProducts(this.paginationBar.find('a.current').text() * this.paginationDropdown.val());
   this.createCurrentSelectionURL();
 };
 
@@ -252,10 +252,10 @@ StoreManager.prototype.filterEvent = function() {
   var _this = this;
   return function() {
     _this.productsDiv.empty();
-    _this.filteredImages();
+    _this.filterProducts();
     _this.createPaginationBar();
     $(_this.paginationBarLinks[0]).addClass('current');
-    _this.eventHandling();
+    _this.eventHandler();
   };
 };
 
@@ -264,7 +264,7 @@ StoreManager.prototype.dropdownEvent = function() {
   return function() {
     _this.createPaginationBar();
     $(_this.paginationBarLinks[0]).addClass('current');
-    _this.eventHandling();
+    _this.eventHandler();
   };
 };
 
@@ -273,14 +273,14 @@ StoreManager.prototype.paginationLinkEvent = function() {
   return function() {
     $(this).addClass('current')
            .siblings().removeClass('current');
-    _this.eventHandling();
+    _this.eventHandler();
   }
 };
 
 StoreManager.prototype.sortDropdownEvent = function() {
   var _this = this;
   return function() {
-    _this.eventHandling();
+    _this.eventHandler();
   };
 };
 
